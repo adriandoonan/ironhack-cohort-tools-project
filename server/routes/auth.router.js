@@ -116,7 +116,8 @@ const { isAuthenticated } = require("../middleware/auth.js");
 router.get("/verify", isAuthenticated, (req, res, next) => {
 	console.log("req.headers", req.headers);
 	console.log("payload", req.payload);
+	const { _id, name, email } = req.payload;
 
-	res.status(200).json({ message: "signature verified", payload: req.payload });
+	res.status(200).json({ _id, name, email });
 });
 module.exports = router;
