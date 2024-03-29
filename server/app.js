@@ -4,6 +4,13 @@ const morgan = require("morgan");
 const cookieParser = require("cookie-parser");
 const cors = require("cors");
 
+//ERROR HANDLER
+const {
+	errorHandler,
+	notFoundHandler,
+	AppError,
+} = require("./middleware/error-handling");
+
 // swagger stuff
 const bodyParser = require("body-parser");
 const swaggerJsdoc = require("swagger-jsdoc");
@@ -99,18 +106,14 @@ app.get("/docs", (req, res) => {
 });
 
 //create student
-app.post("/api/students", (req, res) => {
+app.post("/api/students", (req, res, next) => {
 	Student.create(req.body)
 		.then((createdStudent) => {
 			console.log("Student created ->", createdStudent);
 			res.status(201).json(createdStudent);
 		})
 		.catch((error) => {
-			console.log("Error while creating new student ->", error);
-			res.status(500).json({
-				error: "Failed to create new student",
-				message: error.message,
-			});
+			next(error);
 		});
 });
 
@@ -134,7 +137,7 @@ app.post("/api/students", (req, res) => {
  *               items:
  *                 $ref: "#/components/schemas/student"
  */
-app.get("/api/students", (req, res) => {
+app.get("/api/students", (req, res, next) => {
 	Student.find({})
 		.populate("cohort")
 		.then((students) => {
@@ -142,98 +145,95 @@ app.get("/api/students", (req, res) => {
 			res.json(students);
 		})
 		.catch((error) => {
-			console.error("Error finding students ->", error);
-			res.status(500).send({ error: "Lost students", message: error.message });
+			next(error);
 		});
 });
 
 //get specific student by ID
-app.get("/api/students/:studentId", (req, res) => {
+app.get("/api/students/:studentId", (req, res, next) => {
 	const { studentId } = req.params;
 
 	Student.findById(studentId)
 		.populate("cohort")
 		.then((student) => {
+			if (!student) {
+				throw new AppError("student not found", 404);
+			}
 			console.log("Found student ->", student);
 
 			res.status(200).json(student);
 		})
 		.catch((error) => {
-			console.error("Error while updating the new student ->", error);
-			res
-				.status(500)
-				.json({ error: "internal server error", message: error.message });
+			next(error);
 		});
 });
 
 //update specific student by ID
-app.put("/api/students/:studentId", (req, res) => {
+app.put("/api/students/:studentId", (req, res, next) => {
 	const { studentId } = req.params;
 
 	Student.findByIdAndUpdate(studentId, req.body, { new: true })
 		.then((updateStudent) => {
+			if (!updateStudent) {
+				throw new AppError("updated student not found", 404);
+			}
 			console.log("Updated student ->", updateStudent);
 
 			res.status(200).json(updateStudent);
 		})
 		.catch((error) => {
-			console.error("Error while updating the new student ->", error);
-			res
-				.status(500)
-				.json({ error: "internal server error", message: error.message });
+			next(error);
 		});
 });
 
 //delete a student
-app.delete("/api/students/:studentId", (req, res) => {
+app.delete("/api/students/:studentId", (req, res, next) => {
 	const { studentId } = req.params;
 	Student.findByIdAndDelete(studentId)
 		.then((student) => {
+			if (!student) {
+				throw new AppError("student not deleted", 404);
+			}
 			console.log("Student deleted!");
-			res.status(204).send();
+			res.status(204).json({ message: "student deleted successfully" });
 		})
 		.catch((error) => {
-			console.error("Error while deleting the student ->", error);
-			res
-				.status(500)
-				.json({ error: "Internal server error", message: error.message });
+			next(error);
 		});
 });
 
 //retrieve all students from given cohort
-app.get("/api/students/cohort/:cohortId", (req, res) => {
+app.get("/api/students/cohort/:cohortId", (req, res, next) => {
 	const { cohortId } = req.params;
 
 	Student.find({ cohort: cohortId })
 		.populate("cohort")
 		.then((studentsByCohort) => {
+			if (!studentsByCohort) {
+				throw new AppError("student by cohort not found", 404);
+			}
 			console.log("Found students by cohort ->", studentsByCohort);
 			res.status(200).json(studentsByCohort);
 		})
 		.catch((error) => {
-			console.log("Error while searching for students by cohort", error);
-			res.status(500),
-				json({
-					error: "Failed to find students by cohort",
-					message: error.message,
-				});
+			next(error);
 		});
 });
 
 // Cohort Routes
 
 //create cohort
-app.post("/api/cohorts", (req, res) => {
+app.post("/api/cohorts", (req, res, next) => {
 	Cohort.create(req.body)
 		.then((newCohort) => {
+			// if (!newCohort) {
+			//   throw new AppError("student not deleted", 404);
+			// }
 			console.log("new cohort added", newCohort);
 			res.status(201).json(newCohort);
 		})
 		.catch((error) => {
-			console.error("Error creating new cohort", error);
-			res
-				.status(500)
-				.json({ error: "Failed to create new cohort", message: error.message });
+			next(error);
 		});
 });
 
@@ -257,59 +257,76 @@ app.post("/api/cohorts", (req, res) => {
  *               items:
  *                 $ref: "#/components/schemas/cohort"
  */
-app.get("/api/cohorts", (req, res) => {
+app.get("/api/cohorts", (req, res, next) => {
 	Cohort.find({})
 		.then((cohorts) => {
+			if (!cohorts) {
+				throw new AppError("cohorts not found", 404);
+			}
 			console.log("found cohorts ->", cohorts);
 			res.json(cohorts);
 		})
 		.catch((error) => {
-			console.error("Error finding cohorts ->", error);
-			res.status(500).send({ error: "Lost cohorts" });
+			next(error);
 		});
 });
 
 //single cohort
-app.get("/api/cohorts/:cohortId", (req, res) => {
+app.get("/api/cohorts/:cohortId", (req, res, next) => {
 	const { cohortId } = req.params;
 	Cohort.findById(cohortId)
 		.then((cohort) => {
+			if (!cohort) {
+				throw new AppError("cohort by ID not found", 404);
+			}
 			console.log("found cohort", Cohort);
 			res.status(200).json(cohort);
 		})
 		.catch((error) => {
-			console.error("Error finding Cohort", error);
-			res.status(500).json({ error: "failed to find cohort" });
+			next(error);
 		});
 });
 
 //update cohort
-app.put("/api/cohorts/:cohortId", (req, res) => {
+app.put("/api/cohorts/:cohortId", (req, res, next) => {
 	const { cohortId } = req.params;
-	Cohort.findByIdAndUpdate(cohortId, req.body, { new: true })
+	Cohort.findByIdAndUpdate(cohortId, req.body, {
+		new: true,
+		runValidators: true,
+	})
 		.then((updateCohort) => {
+			if (!updateCohort) {
+				throw new AppError("cohort to update not found", 404);
+			}
 			console.log("updated cohort", updateCohort);
 			res.status(200).json(updateCohort);
 		})
 		.catch((error) => {
-			console.error("error updating Cohort", error);
-			res.status(500).json({ error: "failed to update cohort" });
+			next(error);
 		});
 });
 
 //delete cohort using the ID
-app.delete("/api/cohorts/:cohortId", (req, res) => {
+app.delete("/api/cohorts/:cohortId", (req, res, next) => {
 	const { cohortId } = req.params;
 	Cohort.findByIdAndDelete(cohortId)
 		.then((cohort) => {
+			if (!cohort) {
+				throw new AppError("cohort to delete not found", 404);
+			}
 			console.log("Cohort deleted!");
 			res.status(204).json({ message: "cohort deleted successfully" });
 		})
 		.catch((error) => {
-			console.error("Error while deleting the cohort ->", error);
-			res.status(500).json({ error: "Internal server error" });
+			next(error);
 		});
 });
+
+//Error handler
+app.use(errorHandler);
+
+//Not found handler
+app.use(notFoundHandler);
 
 // START SERVER
 app.listen(PORT, () => {
