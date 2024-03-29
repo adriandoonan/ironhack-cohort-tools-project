@@ -322,6 +322,10 @@ app.delete("/api/cohorts/:cohortId", (req, res, next) => {
 		});
 });
 
+//auth routes
+const authRouter = require("./routes/auth.router");
+app.use("/auth", authRouter);
+
 //Error handler
 app.use(errorHandler);
 
