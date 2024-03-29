@@ -6,6 +6,14 @@ meta {
 
 post {
   url: http://localhost:5005/auth/signup
-  body: none
+  body: json
   auth: none
+}
+
+body:json {
+  {
+    "name":"shrek",
+    "email":"shrek@swamp.com",
+    "password":"1234aB"
+  }
 }

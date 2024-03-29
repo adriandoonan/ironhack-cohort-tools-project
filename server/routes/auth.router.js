@@ -69,8 +69,54 @@ router.post("/signup", (req, res, next) => {
 
 // POST  /auth/login
 // ...
+router.post("/login", (req, res, next) => {
+	const { email, password } = req.body;
+
+	if (!email || !password) {
+		res.status(400).json({ message: "please provide your email and password" });
+		return;
+	}
+
+	User.findOne({ email })
+		.then((foundUser) => {
+			if (!foundUser) {
+				res.status(401).json({ message: "nope" });
+				return;
+			}
+
+			const isPasswordCorrect = bcrypt.compareSync(
+				password,
+				foundUser.password,
+			);
+
+			if (isPasswordCorrect) {
+				const { _id, email, name } = foundUser;
+
+				const payload = { _id, email, name };
+
+				const authToken = jwt.sign(payload, process.env.TOKEN_SECRET, {
+					algorithm: "HS256",
+					expiresIn: "6h",
+				});
+
+				res.status(200).json({ authToken });
+			} else {
+				res.status(401).json({ message: "nope" });
+			}
+		})
+		.catch((err) => {
+			next(err);
+		});
+});
 
 // GET  /auth/verify
 // ...
+const { isAuthenticated } = require("../middleware/auth.js");
 
+router.get("/verify", isAuthenticated, (req, res, next) => {
+	console.log("req.headers", req.headers);
+	console.log("payload", req.payload);
+
+	res.status(200).json({ message: "signature verified", payload: req.payload });
+});
 module.exports = router;
