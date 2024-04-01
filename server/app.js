@@ -4,6 +4,8 @@ const morgan = require("morgan");
 const cookieParser = require("cookie-parser");
 const cors = require("cors");
 
+require("dotenv").config();
+
 //ERROR HANDLER
 const {
 	errorHandler,
@@ -321,6 +323,15 @@ app.delete("/api/cohorts/:cohortId", (req, res, next) => {
 			next(error);
 		});
 });
+
+//auth routes
+const authRouter = require("./routes/auth.router");
+app.use("/auth", authRouter);
+
+/***********Protected routes to search for a user by ID*************/
+const { isAuthenticated } = require("./middleware/auth");
+const userRouter = require("./routes/user.router");
+app.use("/api/users", isAuthenticated, userRouter);
 
 //Error handler
 app.use(errorHandler);
